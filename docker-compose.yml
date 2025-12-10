@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: ppe_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/models:/app/models
+      - ./backend/temp_videos:/app/temp_videos
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=true
+      - MODEL_PATH=/app/models/ppe.pt
+      - CONFIDENCE_THRESHOLD=0.5
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173
+    networks:
+      - ppe_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=/api
+        - VITE_WS_URL=/ws
+    container_name: ppe_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=/api
+    networks:
+      - ppe_network
+    restart: unless-stopped
+
+  nginx:
+    build: ./nginx
+    container_name: ppe_nginx
+    ports:
+      - "8080:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - ppe_network
+    restart: unless-stopped
+
+networks:
+  ppe_network:
+    driver: bridge
