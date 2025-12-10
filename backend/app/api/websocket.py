@@ -8,6 +8,7 @@ import asyncio
 import cv2
 import base64
 import time
+import os
 from app.services.video_processor import VideoProcessor
 from app.services.detector import PPEDetector
 from app.utils.frame_annotator import FrameAnnotator
@@ -185,6 +186,15 @@ async def process_video_stream(client_id: str, source: str, video_id: str = None
             del processing_tasks[client_id]
         if client_id in client_configs:
             del client_configs[client_id]
+            
+        # Remover arquivo temporário se for um upload
+        if video_id and source and os.path.exists(source):
+            try:
+                os.remove(source)
+                print(f"Arquivo temporário removido: {source}")
+            except Exception as e:
+                print(f"Erro ao remover arquivo temporário {source}: {e}")
+
         await manager.send_message(client_id, {"type": "status", "message": "Processamento finalizado"})
 
 

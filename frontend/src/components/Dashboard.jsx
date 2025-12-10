@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import VideoUploader from './VideoUploader';
+import StreamConfig from './StreamConfig';
 import StreamViewer from './StreamViewer';
 import AlertPanel from './AlertPanel';
 import StatsPanel from './StatsPanel';
@@ -10,6 +11,7 @@ import { LayoutDashboard, Video, Settings, Moon, Sun } from 'lucide-react';
 const Dashboard = () => {
     const [activeVideoId, setActiveVideoId] = useState(null);
     const [activeStreamUrl, setActiveStreamUrl] = useState(null);
+    const [inputType, setInputType] = useState('upload');
     const [currentStats, setCurrentStats] = useState(null);
     const [recentAlerts, setRecentAlerts] = useState([]);
     const [selectedEpis, setSelectedEpis] = useState(['Hardhat', 'Mask', 'Safety Vest', 'Person']);
@@ -29,6 +31,13 @@ const Dashboard = () => {
         setActiveVideoId(result.video_id);
         setActiveStreamUrl(null);
         // Reset alerts when starting new video
+        setRecentAlerts([]);
+    };
+
+    const handleStreamConnect = (result) => {
+        console.log('Stream connected:', result);
+        setActiveStreamUrl(result.stream_url);
+        setActiveVideoId(null);
         setRecentAlerts([]);
     };
 
@@ -113,10 +122,28 @@ const Dashboard = () => {
                             )}
                         </div>
 
-                        {/* Upload Section */}
+                        {/* Input Section */}
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 transition-colors duration-200">
-                            <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Nova Análise</h2>
-                            <VideoUploader onUploadComplete={handleUploadComplete} />
+                            <div className="flex space-x-4 mb-6 border-b border-gray-200 dark:border-gray-700 pb-2">
+                                <button
+                                    className={`pb-2 px-1 ${inputType === 'upload' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                    onClick={() => setInputType('upload')}
+                                >
+                                    Upload de Arquivo
+                                </button>
+                                <button
+                                    className={`pb-2 px-1 ${inputType === 'stream' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                    onClick={() => setInputType('stream')}
+                                >
+                                    Streaming (RTMP/SRT)
+                                </button>
+                            </div>
+                            
+                            {inputType === 'upload' ? (
+                                <VideoUploader onUploadComplete={handleUploadComplete} />
+                            ) : (
+                                <StreamConfig onConnect={handleStreamConnect} />
+                            )}
                         </div>
                     </div>
 

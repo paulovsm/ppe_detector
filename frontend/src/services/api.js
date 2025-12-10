@@ -29,4 +29,29 @@ export const getClasses = async () => {
     return response.data;
 };
 
+export const connectStream = async (streamUrl, protocol) => {
+    const formData = new FormData();
+    formData.append('stream_url', streamUrl);
+    formData.append('protocol', protocol);
+
+    const response = await api.post('/stream/connect', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data;
+};
+
+export const disconnectStream = async (streamId) => {
+    const formData = new FormData();
+    formData.append('stream_id', streamId);
+
+    const response = await api.post('/stream/disconnect', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data;
+};
+
 export default api;
