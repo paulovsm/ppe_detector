@@ -3,7 +3,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { useVideoStream } from '../hooks/useVideoStream';
 import { Play, Pause, Activity } from 'lucide-react';
 
-const StreamViewer = ({ videoId, streamUrl, onStatsUpdate, onAlert }) => {
+const StreamViewer = ({ videoId, streamUrl, onStatsUpdate, onAlert, selectedEpis }) => {
     const canvasRef = useRef(null);
     const clientId = useRef(Math.random().toString(36).substring(7)).current;
     
@@ -14,6 +14,18 @@ const StreamViewer = ({ videoId, streamUrl, onStatsUpdate, onAlert }) => {
     const { isPlaying, fps, renderFrame, togglePlay } = useVideoStream(canvasRef);
     
     const [processingStarted, setProcessingStarted] = useState(false);
+
+    // Update config when selectedEpis changes
+    useEffect(() => {
+        if (isConnected) {
+            sendMessage({
+                action: 'update_config',
+                config: {
+                    selected_classes: selectedEpis
+                }
+            });
+        }
+    }, [isConnected, selectedEpis, sendMessage]);
 
     // Handle incoming frames
     useEffect(() => {

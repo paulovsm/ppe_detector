@@ -6,10 +6,7 @@ const EPISelector = ({ selectedEpis, onToggle }) => {
         { id: 'Hardhat', label: 'Capacete' },
         { id: 'Mask', label: 'Máscara' },
         { id: 'Safety Vest', label: 'Colete' },
-        { id: 'Person', label: 'Pessoas' },
-        { id: 'Safety Cone', label: 'Cones' },
-        { id: 'machinery', label: 'Maquinário' },
-        { id: 'vehicle', label: 'Veículos' }
+        { id: 'Person', label: 'Pessoas' }
     ];
 
     return (

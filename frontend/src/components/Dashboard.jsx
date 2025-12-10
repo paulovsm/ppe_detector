@@ -111,6 +111,7 @@ const Dashboard = () => {
                                     streamUrl={activeStreamUrl}
                                     onStatsUpdate={handleStatsUpdate}
                                     onAlert={handleAlert}
+                                    selectedEpis={selectedEpis}
                                 />
                             ) : (
                                 <div className="aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500">

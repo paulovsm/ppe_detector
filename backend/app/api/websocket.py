@@ -119,6 +119,7 @@ async def process_video_stream(client_id: str, source: str, video_id: str = None
             # Obter configurações do cliente
             config = client_configs.get(client_id, {"show_boxes": True})
             show_boxes = config.get("show_boxes", True)
+            selected_classes = config.get("selected_classes", None)
 
             # Redimensionar frame para garantir performance (se VideoProcessor não tiver feito)
             # Forçar resize para 640x480 se for maior
@@ -140,6 +141,10 @@ async def process_video_stream(client_id: str, source: str, video_id: str = None
                 # 3. Recalcular violações com base nas detecções suavizadas
                 violations = detector.get_violations(smoothed_detections)
                 
+                # Atualizar estatísticas com dados suavizados para evitar volatilidade
+                last_stats["total_detections"] = len(smoothed_detections)
+                last_stats["violations_count"] = len(violations)
+                
                 # Processar alertas com cooldown
                 new_alerts = alert_manager.process_violations(violations)
                 
@@ -152,7 +157,20 @@ async def process_video_stream(client_id: str, source: str, video_id: str = None
             
             # 4. Anotação (usando as últimas detecções conhecidas)
             if show_boxes:
-                annotated_frame = annotator.annotate(frame, last_detections)
+                detections_to_draw = last_detections
+                if selected_classes is not None:
+                    # Expandir seleção para incluir classes negativas (NO-...)
+                    expanded_selection = set(selected_classes)
+                    if 'Hardhat' in selected_classes:
+                        expanded_selection.add('NO-Hardhat')
+                    if 'Mask' in selected_classes:
+                        expanded_selection.add('NO-Mask')
+                    if 'Safety Vest' in selected_classes:
+                        expanded_selection.add('NO-Safety Vest')
+                    
+                    detections_to_draw = [d for d in last_detections if d['class_name'] in expanded_selection]
+                
+                annotated_frame = annotator.annotate(frame, detections_to_draw)
             else:
                 annotated_frame = frame
             
