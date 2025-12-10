@@ -8,9 +8,12 @@ import EPISelector from './EPISelector';
 import Toast from './Toast';
 import { LayoutDashboard, Video, Settings, Moon, Sun } from 'lucide-react';
 
+import { disconnectStream } from '../services/api';
+
 const Dashboard = () => {
     const [activeVideoId, setActiveVideoId] = useState(null);
     const [activeStreamUrl, setActiveStreamUrl] = useState(null);
+    const [activeStreamId, setActiveStreamId] = useState(null);
     const [inputType, setInputType] = useState('upload');
     const [currentStats, setCurrentStats] = useState(null);
     const [recentAlerts, setRecentAlerts] = useState([]);
@@ -30,6 +33,7 @@ const Dashboard = () => {
         console.log('Upload complete:', result);
         setActiveVideoId(result.video_id);
         setActiveStreamUrl(null);
+        setActiveStreamId(null);
         // Reset alerts when starting new video
         setRecentAlerts([]);
     };
@@ -37,8 +41,21 @@ const Dashboard = () => {
     const handleStreamConnect = (result) => {
         console.log('Stream connected:', result);
         setActiveStreamUrl(result.stream_url);
+        setActiveStreamId(result.stream_id);
         setActiveVideoId(null);
         setRecentAlerts([]);
+    };
+
+    const handleStreamDisconnect = async () => {
+        if (activeStreamId) {
+            try {
+                await disconnectStream(activeStreamId);
+            } catch (error) {
+                console.error('Error disconnecting stream:', error);
+            }
+        }
+        setActiveStreamUrl(null);
+        setActiveStreamId(null);
     };
 
     const handleStatsUpdate = useCallback((stats) => {
@@ -143,7 +160,11 @@ const Dashboard = () => {
                             {inputType === 'upload' ? (
                                 <VideoUploader onUploadComplete={handleUploadComplete} />
                             ) : (
-                                <StreamConfig onConnect={handleStreamConnect} />
+                                <StreamConfig 
+                                    onConnect={handleStreamConnect} 
+                                    onDisconnect={handleStreamDisconnect}
+                                    isConnected={!!activeStreamUrl}
+                                />
                             )}
                         </div>
                     </div>

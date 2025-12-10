@@ -104,32 +104,50 @@ async def upload_video(
 
 
 @router.post("/stream/connect")
-async def connect_stream(stream_url: str = Form(...), protocol: str = Form(default="rtmp")):
+async def connect_stream(
+    protocol: str = Form(default="rtmp"),
+    stream_key: str = Form(...)
+):
     """
-    Conecta a uma stream de vídeo RTMP ou SRT
+    Inicia processamento de uma stream (RTMP/SRT)
     """
-    valid_protocols = ["rtmp", "rtmps", "srt"]
+    valid_protocols = ["rtmp", "srt"]
     if protocol.lower() not in valid_protocols:
         raise HTTPException(
             status_code=400,
             detail=f"Protocolo não suportado. Use: {', '.join(valid_protocols)}"
         )
     
-    stream_id = await stream_handler.connect(stream_url, protocol)
+    # Construir URL interna para o backend consumir
+    # O backend conecta no container mediamtx
+    if protocol == "rtmp":
+        stream_url = f"rtmp://mediamtx:1935/live/{stream_key}"
+    elif protocol == "srt":
+        # MediaMTX SRT URL pattern for reading
+        stream_url = f"srt://mediamtx:8890?streamid=read:{stream_key}"
+    
+    print(f"Iniciando conexão com stream: {stream_url} (Protocolo: {protocol})")
+    
+    try:
+        # Agora o connect retorna imediatamente e tenta conectar em background
+        stream_id = await stream_handler.connect(stream_url, protocol)
+    except Exception as e:
+        print(f"Erro interno ao registrar stream: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
     
     if not stream_id:
         raise HTTPException(
             status_code=400,
-            detail="Não foi possível conectar à stream. Verifique a URL e se a fonte está ativa."
+            detail="Erro ao registrar stream."
         )
     
     return JSONResponse(
         content={
-            "message": "Stream conectada com sucesso",
+            "message": "Stream registrada. Aguardando sinal de vídeo...",
             "stream_id": stream_id,
             "stream_url": stream_url,
             "protocol": protocol,
-            "status": "active"
+            "status": "pending"
         },
         status_code=200
     )

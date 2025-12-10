@@ -1,41 +1,67 @@
-import React, { useState } from 'react';
-import { Radio, Link, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Radio, AlertCircle, Play, Square } from 'lucide-react';
 import { connectStream } from '../services/api';
 
-const StreamConfig = ({ onConnect }) => {
-    const [url, setUrl] = useState('');
+const StreamConfig = ({ onConnect, onDisconnect, isConnected }) => {
     const [protocol, setProtocol] = useState('rtmp');
+    const [streamKey, setStreamKey] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [hostname, setHostname] = useState('localhost');
+
+    useEffect(() => {
+        setHostname(window.location.hostname);
+        // Gerar chave simples
+        setStreamKey('ppe_stream_' + Math.floor(Math.random() * 1000));
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!url) return;
-
         setLoading(true);
         setError(null);
 
         try {
-            const result = await connectStream(url, protocol);
+            const result = await connectStream(streamKey, protocol);
             onConnect(result);
         } catch (err) {
             console.error(err);
-            setError('Erro ao conectar à stream. Verifique a URL e tente novamente.');
+            setError('Erro ao iniciar processamento. Verifique se o OBS está transmitindo para o servidor.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDisconnect = async () => {
+        setLoading(true);
+        try {
+            await onDisconnect();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getServerUrl = () => {
+        if (protocol === 'rtmp') return `rtmp://${hostname}:1935/live`;
+        return `srt://${hostname}:8890`;
+    };
+
+    const getObsUrl = () => {
+        if (protocol === 'rtmp') return `rtmp://${hostname}:1935/live`;
+        return `srt://${hostname}:8890?streamid=publish:${streamKey}`;
     };
 
     return (
         <div className="w-full max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white flex items-center">
                 <Radio className="w-6 h-6 mr-2 text-blue-600" />
-                Configuração de Stream
+                Servidor de Streaming
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Protocolo
                     </label>
                     <div className="flex space-x-4">
@@ -47,7 +73,8 @@ const StreamConfig = ({ onConnect }) => {
                                     value={p}
                                     checked={protocol === p}
                                     onChange={(e) => setProtocol(e.target.value)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                    disabled={isConnected}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 disabled:opacity-50"
                                 />
                                 <span className="ml-2 text-gray-700 dark:text-gray-300 uppercase">{p}</span>
                             </label>
@@ -55,27 +82,47 @@ const StreamConfig = ({ onConnect }) => {
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        URL da Stream
-                    </label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Link className="h-5 w-5 text-gray-400" />
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md space-y-3">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                        Configuração no OBS Studio
+                    </h3>
+                    
+                    <div>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 uppercase">Servidor</label>
+                        <div className="flex items-center mt-1">
+                            <code className="flex-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-mono text-gray-900 dark:text-white break-all">
+                                {getServerUrl()}
+                            </code>
                         </div>
-                        <input
-                            type="text"
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            placeholder={protocol === 'rtmp' ? 'rtmp://localhost/live/stream' : 'srt://localhost:8890'}
-                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        />
                     </div>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {protocol === 'rtmp' 
-                            ? 'Ex: rtmp://192.168.1.100/live/cam1' 
-                            : 'Ex: srt://192.168.1.100:8890?mode=caller'}
-                    </p>
+
+                    {protocol === 'rtmp' && (
+                        <div>
+                            <label className="block text-xs text-gray-500 dark:text-gray-400 uppercase">Chave da Stream</label>
+                            <div className="flex items-center mt-1">
+                                <code className="flex-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-mono text-gray-900 dark:text-white">
+                                    {streamKey}
+                                </code>
+                            </div>
+                        </div>
+                    )}
+
+                    {protocol === 'srt' && (
+                        <div>
+                            <label className="block text-xs text-gray-500 dark:text-gray-400 uppercase">URL Completa (SRT)</label>
+                            <div className="flex items-center mt-1">
+                                <code className="flex-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-mono text-gray-900 dark:text-white break-all">
+                                    {getObsUrl()}
+                                </code>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <p>1. Configure o OBS com os dados acima.</p>
+                    <p>2. Inicie a transmissão no OBS.</p>
+                    <p>3. Clique no botão abaixo para iniciar a detecção.</p>
                 </div>
 
                 {error && (
@@ -91,15 +138,38 @@ const StreamConfig = ({ onConnect }) => {
                     </div>
                 )}
 
-                <button
-                    type="submit"
-                    disabled={loading || !url}
-                    className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                        (loading || !url) ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                >
-                    {loading ? 'Conectando...' : 'Conectar Stream'}
-                </button>
+                {!isConnected ? (
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className={`w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
+                            loading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                    >
+                        {loading ? 'Conectando...' : (
+                            <>
+                                <Play className="w-4 h-4 mr-2" />
+                                Iniciar Detecção
+                            </>
+                        )}
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={handleDisconnect}
+                        disabled={loading}
+                        className={`w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${
+                            loading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                    >
+                        {loading ? 'Desconectando...' : (
+                            <>
+                                <Square className="w-4 h-4 mr-2 fill-current" />
+                                Parar Detecção
+                            </>
+                        )}
+                    </button>
+                )}
             </form>
         </div>
     );

@@ -78,6 +78,9 @@ async def process_video_stream(client_id: str, source: str, video_id: str = None
     """
     Task de processamento de vídeo em background
     """
+    # Se a fonte for uma stream (começa com rtmp:// ou srt://), usamos o StreamHandler
+    is_stream = source.startswith("rtmp://") or source.startswith("srt://")
+    
     processor = VideoProcessor()
     detector = PPEDetector()
     annotator = FrameAnnotator()
@@ -85,7 +88,10 @@ async def process_video_stream(client_id: str, source: str, video_id: str = None
     smoother = DetectionSmoother(min_hits=1, max_disappeared=5)
     
     # Tentar abrir vídeo (arquivo ou stream)
-    if not processor.open_file(source):
+    if is_stream:
+        # Para streams, não usamos processor.open_file
+        pass
+    elif not processor.open_file(source):
         await manager.send_message(client_id, {"type": "error", "message": "Erro ao abrir vídeo"})
         return
 
@@ -104,7 +110,10 @@ async def process_video_stream(client_id: str, source: str, video_id: str = None
         last_detections = []
         last_stats = {}
         
-        for frame in processor.get_frames():
+        # Importar stream_handler aqui para evitar import circular
+        from app.api.routes import stream_handler
+        
+        while True:
             start_time = time.time()
             frame_count += 1
             
@@ -116,16 +125,42 @@ async def process_video_stream(client_id: str, source: str, video_id: str = None
             if client_id not in processing_tasks:
                 break
             
+            frame = None
+            
+            if is_stream:
+                # Encontrar stream_id correspondente à URL
+                target_stream_id = None
+                for sid, s_data in stream_handler.active_streams.items():
+                    if s_data["url"] == source:
+                        target_stream_id = sid
+                        break
+                
+                if target_stream_id:
+                    frame = await stream_handler.get_frame(target_stream_id)
+                
+                if frame is None:
+                    # Se não tem frame, aguarda um pouco e tenta de novo
+                    await asyncio.sleep(0.1)
+                    continue
+            else:
+                # Lógica para arquivo (VideoProcessor)
+                if processor.cap and processor.cap.isOpened():
+                    ret, frame = processor.cap.read()
+                    if not ret:
+                        break
+                else:
+                    break
+
             # Obter configurações do cliente
             config = client_configs.get(client_id, {"show_boxes": True})
             show_boxes = config.get("show_boxes", True)
             selected_classes = config.get("selected_classes", None)
 
-            # Redimensionar frame para garantir performance (se VideoProcessor não tiver feito)
-            # Forçar resize para 640x480 se for maior
-            h, w = frame.shape[:2]
-            if w > 640 or h > 640:
-                frame = cv2.resize(frame, (640, 480))
+            # Redimensionar frame para garantir performance
+            if frame is not None:
+                h, w = frame.shape[:2]
+                if w > 640 or h > 640:
+                    frame = cv2.resize(frame, (640, 480))
 
             # Lógica de Skip Frames para Detecção
             if frame_count % skip_frames == 0:
@@ -199,7 +234,8 @@ async def process_video_stream(client_id: str, source: str, video_id: str = None
         print(f"Erro no processamento: {e}")
         await manager.send_message(client_id, {"type": "error", "message": str(e)})
     finally:
-        processor.release()
+        if not is_stream:
+            processor.release()
         if client_id in processing_tasks:
             del processing_tasks[client_id]
         if client_id in client_configs:

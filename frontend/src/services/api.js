@@ -29,9 +29,9 @@ export const getClasses = async () => {
     return response.data;
 };
 
-export const connectStream = async (streamUrl, protocol) => {
+export const connectStream = async (streamKey, protocol) => {
     const formData = new FormData();
-    formData.append('stream_url', streamUrl);
+    formData.append('stream_key', streamKey);
     formData.append('protocol', protocol);
 
     const response = await api.post('/stream/connect', formData, {
