@@ -4,6 +4,7 @@ Serviço de detecção de EPIs usando YOLOv8
 import numpy as np
 from typing import List, Optional
 import time
+import torch
 from ultralytics import YOLO
 from app.config import MODEL_PATH, CONFIDENCE_THRESHOLD, YOLO_CLASSES, ALERT_CLASSES, POSITIVE_CLASSES
 
@@ -42,6 +43,14 @@ class PPEDetector:
                 self.model = YOLO(self.model_path)
                 self._model_loaded = True
                 print(f"Modelo carregado com sucesso: {self.model_path}")
+                
+                if torch.cuda.is_available():
+                    print(f"Usando GPU: {torch.cuda.get_device_name(0)}")
+                    # Forçar uso da GPU se disponível
+                    self.model.to('cuda')
+                else:
+                    print("Usando CPU")
+                    
             except Exception as e:
                 print(f"Erro ao carregar modelo: {e}")
                 raise e

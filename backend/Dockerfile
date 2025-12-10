@@ -1,6 +1,6 @@
 # Backend Dockerfile - PPE Detection API
 # Stage 1: Builder
-FROM python:3.11-slim as builder
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime as builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY requirements.txt .
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
 
 # Stage 2: Final
-FROM python:3.11-slim
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 
 WORKDIR /app
 
@@ -39,6 +39,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copiar wheels do builder e instalar
 COPY --from=builder /app/wheels /wheels
 COPY --from=builder /app/requirements.txt .
+# Remover wheels do torch/torchvision para usar os da imagem base (com CUDA)
+RUN rm -f /wheels/torch-* /wheels/torchvision-* || true
 RUN pip install --no-cache /wheels/*
 
 # Copiar código da aplicação

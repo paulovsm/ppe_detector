@@ -26,6 +26,7 @@ A maneira mais rápida de rodar o projeto é utilizando Docker Compose.
 ### Pré-requisitos
 - Docker Engine (24.x+)
 - Docker Compose (2.x+)
+- NVIDIA Container Toolkit (para suporte a GPU)
 
 ### Rodando a Aplicação
 
@@ -43,6 +44,17 @@ A maneira mais rápida de rodar o projeto é utilizando Docker Compose.
 3. Acesse a aplicação:
    - **Frontend**: http://localhost
    - **API Docs**: http://localhost/api/docs
+
+### ⚡ Suporte a GPU
+
+O projeto está configurado para utilizar GPU NVIDIA automaticamente se disponível.
+
+1. Certifique-se de ter os drivers NVIDIA e o **NVIDIA Container Toolkit** instalados no host.
+2. O serviço `backend` irá detectar a GPU e utilizar CUDA para aceleração do modelo YOLO.
+3. Para verificar se a GPU está sendo utilizada, verifique os logs:
+   ```bash
+   docker-compose logs backend | grep "Usando GPU"
+   ```
 
 ## 📚 Documentação
 
