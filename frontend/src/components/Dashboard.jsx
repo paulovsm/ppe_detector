@@ -1,11 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import VideoUploader from './VideoUploader';
-import StreamConfig from './StreamConfig';
 import StreamViewer from './StreamViewer';
 import AlertPanel from './AlertPanel';
 import StatsPanel from './StatsPanel';
-import EPISelector from './EPISelector';
 import Toast from './Toast';
+import SettingsModal from './SettingsModal';
 import { LayoutDashboard, Video, Settings, Moon, Sun } from 'lucide-react';
 
 import { disconnectStream } from '../services/api';
@@ -20,6 +18,7 @@ const Dashboard = () => {
     const [selectedEpis, setSelectedEpis] = useState(['Hardhat', 'Mask', 'Safety Vest', 'Person']);
     const [toast, setToast] = useState(null);
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     useEffect(() => {
         if (isDarkMode) {
@@ -101,7 +100,10 @@ const Dashboard = () => {
                         >
                             {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </button>
-                        <button className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <button 
+                            onClick={() => setIsSettingsOpen(true)}
+                            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
                             <Settings className="w-5 h-5" />
                         </button>
                         <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold">
@@ -139,45 +141,29 @@ const Dashboard = () => {
                                 </div>
                             )}
                         </div>
-
-                        {/* Input Section */}
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 transition-colors duration-200">
-                            <div className="flex space-x-4 mb-6 border-b border-gray-200 dark:border-gray-700 pb-2">
-                                <button
-                                    className={`pb-2 px-1 ${inputType === 'upload' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                                    onClick={() => setInputType('upload')}
-                                >
-                                    Upload de Arquivo
-                                </button>
-                                <button
-                                    className={`pb-2 px-1 ${inputType === 'stream' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                                    onClick={() => setInputType('stream')}
-                                >
-                                    Streaming (RTMP/SRT)
-                                </button>
-                            </div>
-                            
-                            {inputType === 'upload' ? (
-                                <VideoUploader onUploadComplete={handleUploadComplete} />
-                            ) : (
-                                <StreamConfig 
-                                    onConnect={handleStreamConnect} 
-                                    onDisconnect={handleStreamDisconnect}
-                                    isConnected={!!activeStreamUrl}
-                                />
-                            )}
-                        </div>
                     </div>
 
                     {/* Right Column: Alerts & Controls */}
                     <div className="space-y-6">
-                        <EPISelector selectedEpis={selectedEpis} onToggle={toggleEpi} />
                         <div className="h-[600px]">
                             <AlertPanel alerts={recentAlerts} />
                         </div>
                     </div>
                 </div>
             </main>
+
+            <SettingsModal 
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                inputType={inputType}
+                setInputType={setInputType}
+                onUploadComplete={handleUploadComplete}
+                onConnect={handleStreamConnect}
+                onDisconnect={handleStreamDisconnect}
+                isConnected={!!activeStreamUrl}
+                selectedEpis={selectedEpis}
+                onToggleEpi={toggleEpi}
+            />
         </div>
     );
 };

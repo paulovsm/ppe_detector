@@ -37,17 +37,20 @@ A maneira mais rápida de rodar o projeto é utilizando Docker Compose.
    ```
 
 2. Inicie os containers:
+
+   **Modo CPU (Padrão):**
    ```bash
    docker-compose up --build
+   ```
+
+   **Modo GPU (Requer NVIDIA Container Toolkit):**
+   ```bash
+   docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
    ```
 
 3. Acesse a aplicação:
    - **Frontend**: http://localhost
    - **API Docs**: http://localhost/api/docs
-
-### ⚡ Suporte a GPU
-
-O projeto está configurado para utilizar GPU NVIDIA automaticamente se disponível.
 
 1. Certifique-se de ter os drivers NVIDIA e o **NVIDIA Container Toolkit** instalados no host.
 2. O serviço `backend` irá detectar a GPU e utilizar CUDA para aceleração do modelo YOLO.
